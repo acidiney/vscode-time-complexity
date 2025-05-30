@@ -6,6 +6,7 @@ export const complexityOrder = [
   TimeComplexity.Linear,
   TimeComplexity.Linearithmic,
   TimeComplexity.Quadratic,
+  TimeComplexity.Cubic,
   TimeComplexity.Exponential,
   TimeComplexity.Factorial,
 ];

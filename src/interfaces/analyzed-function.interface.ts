@@ -7,4 +7,5 @@ export interface AnalyzedFunction {
   position: Position;
   calls: Set<string>;
   complexity: TimeComplexity;
+  analysisDetails: any
 }

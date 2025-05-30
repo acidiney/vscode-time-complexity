@@ -9,6 +9,8 @@ export enum TimeComplexity {
 
   Quadratic = "O(n^2)",
 
+  Cubic = "O(n^3)",
+
   Exponential = "O(2^n)",
 
   Factorial = "O(n!)",
