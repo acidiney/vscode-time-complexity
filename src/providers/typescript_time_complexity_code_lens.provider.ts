@@ -2,16 +2,10 @@ import * as vscode from "vscode";
 import { AnalyzedFunction } from "../interfaces/analyzed-function.interface";
 import { complexityOrder } from "../utils/complexity-order";
 import { TimeComplexity } from "../enums/time-complexity.enum";
+import ts from "typescript";
 
 export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
   onDidChangeCodeLenses?: vscode.Event<void>;
-
-  private functionRegexes = [
-    /function\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*\{((?:[^{}]*|\{(?:[^{}]*|\{[^{}]*\})*\})*)\}/g, // Standard functions
-    /([a-zA-Z0-9_]+)\s*=\s*function\s*\(([^)]*)\)\s*\{((?:[^{}]*|\{(?:[^{}]*|\{[^{}]*\})*\})*)\}/g, // Anonymous function expressions assigned to a variable
-    /([a-zA-Z0-9_]+)\s*=\s*\(([^)]*)\)\s*=>\s*\{((?:[^{}]*|\{(?:[^{}]*|\{[^{}]*\})*\})*)\}/g, // Arrow functions assigned to a variable
-    /([a-zA-Z0-9_]+)\s*\(([^)]*)\)\s*\{((?:[^{}]*|\{(?:[^{}]*|\{[^{}]*\})*\})*)\}/g, // Class methods (needs to be careful not to match too broadly)
-  ];
 
   public provideCodeLenses(
     document: vscode.TextDocument
@@ -19,7 +13,6 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
     const text = document.getText();
     const functions = this.extractFunctions(text, document);
     this.resolveCallGraph(functions);
-
 
     return functions.map((fn) => {
       const range = new vscode.Range(fn.position.line, 0, fn.position.line, 0);
@@ -31,42 +24,61 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
     });
   }
 
-  private extractFunctions(
-    text: string,
-    document: vscode.TextDocument
-  ): AnalyzedFunction[] {
-    const uniqueFunctions = new Map<string, AnalyzedFunction>();
+  private extractFunctions(text: string, document: vscode.TextDocument): AnalyzedFunction[] {
+    const sourceFile = ts.createSourceFile(
+      document.fileName,
+      text,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX
+    );
 
-    for (const regex of this.functionRegexes) {
-      regex.lastIndex = 0;
-      let match;
-      while ((match = regex.exec(text)) !== null) {
-        const [_, name, _params, body] = match;
-        const pos = document.positionAt(match.index);
+    const functions: AnalyzedFunction[] = [];
 
-        const cleanBody = body
-          .replace(/\/\*[\s\S]*?\*\//g, "")
-          .replace(/\/\/.*$/gm, "");
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isFunctionDeclaration(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isArrowFunction(node) ||
+        ts.isMethodDeclaration(node)
+      ) {
+        const name = this.getFunctionName(node);
+        if (!name) { return; }
 
-        // Create a unique key for the function.
-        // We use the function name and its starting line number.
-        // Rounding the line number can help if regexes have slight variations in start index.
-        const key = `${name}@${pos.line}`;
+        const start = node.getStart();
+        const end = node.getEnd();
+        const bodyText = text.slice(start, end);
+        const position = document.positionAt(start);
 
-        // Only add if we haven't seen this unique function declaration before at this line.
-        // If a function name appears on multiple lines, we'll treat them as distinct functions.
-        if (!uniqueFunctions.has(key)) {
-          uniqueFunctions.set(key, {
-            name,
-            body: cleanBody,
-            position: pos,
-            calls: this.extractCalls(cleanBody),
-            complexity: this.estimateComplexity(cleanBody, name),
-          });
-        }
+        functions.push({
+          name,
+          body: bodyText,
+          position,
+          calls: this.extractCalls(bodyText),
+          complexity: this.estimateComplexity(bodyText, name),
+        });
       }
+      ts.forEachChild(node, visit);
+    };
+
+    visit(sourceFile);
+    return functions;
+  }
+
+  private getFunctionName(node: ts.FunctionLikeDeclaration): string | null {
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      return node.name.text;
+    } else if (
+      (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) &&
+      node.parent &&
+      ts.isVariableDeclaration(node.parent) &&
+      ts.isIdentifier(node.parent.name)
+    ) {
+      return node.parent.name.text;
+    } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
+      return node.name.text;
     }
-    return Array.from(uniqueFunctions.values());
+    return null;
   }
 
   private extractCalls(body: string): Set<string> {
@@ -76,7 +88,6 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
     let match;
     while ((match = regex.exec(body)) !== null) {
       const fn = match[1];
-      // Exclude common keywords and control flow statements
       if (
         ![
           "for",
@@ -147,17 +158,11 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
     } while (changed);
   }
 
-  private estimateComplexity(
-    body: string,
-    functionName: string
-  ): TimeComplexity {
-    const arrayOps =
-      /\.map\(|\.forEach\(|\.filter\(|\.reduce\(|\.some\(|\.every\(/;
+  private estimateComplexity(body: string, functionName: string): TimeComplexity {
+    const arrayOps = /\.map\(|\.forEach\(|\.filter\(|\.reduce\(|\.some\(|\.every\(/;
     const sortOps = /\.sort\(/;
     const loops = /\b(for|while)\s*\(/;
 
-    // Regex to capture the first argument of the recursive call.
-    // It's global to find all occurrences within the body.
     const recursiveCallWithArgRegex = new RegExp(
       `\\b${functionName}\\s*\\(([^,)]*)\\)`,
       "g"
@@ -165,7 +170,6 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
 
     let complexity = TimeComplexity.CONSTANT;
 
-    // Prioritize explicit loops/array ops/sorts
     if (loops.test(body) || arrayOps.test(body)) {
       complexity = TimeComplexity.Linear;
     }
@@ -179,8 +183,7 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
       complexity = this.getMaxComplexity(complexity, TimeComplexity.Quadratic);
     }
 
-    // recursion patterns
-    recursiveCallWithArgRegex.lastIndex = 0; // Reset before first use in a loop
+    recursiveCallWithArgRegex.lastIndex = 0;
     let recursiveMatch;
     let isActuallyRecursive = false;
     let maxRecursiveComplexityFound = TimeComplexity.CONSTANT;
@@ -194,18 +197,12 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
           maxRecursiveComplexityFound,
           TimeComplexity.Logarithmic
         );
-      } else if (
-        /\s*-\s*\d+/.test(paramPassed) ||
-        /\s*\+\s*\d+/.test(paramPassed)
-      ) {
-        // Addition or subtraction by a constant (e.g., n-1, n+1) -> O(n)
+      } else if (/\s*-\s*\d+/.test(paramPassed) || /\s*\+\s*\d+/.test(paramPassed)) {
         maxRecursiveComplexityFound = this.getMaxComplexity(
           maxRecursiveComplexityFound,
           TimeComplexity.Linear
         );
       } else {
-        // If no clear linear or logarithmic pattern, assume exponential.
-        // This covers cases like fib(n-1) + fib(n-2) or complex arguments.
         maxRecursiveComplexityFound = this.getMaxComplexity(
           maxRecursiveComplexityFound,
           TimeComplexity.Exponential
