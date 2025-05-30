@@ -2,7 +2,7 @@
   "name": "time-complexity",
   "displayName": "time-complexity",
   "description": "Get the time complexity of an fn",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "AcidineyDias",
   "engines": {
     "vscode": "^1.100.0"
