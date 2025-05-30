@@ -1,5 +1,7 @@
 # Time Complexity Analyzer
 
+![image](./image.png)
+
 A simple adapter to manage time complexity in your applications.
 Motivation
 
