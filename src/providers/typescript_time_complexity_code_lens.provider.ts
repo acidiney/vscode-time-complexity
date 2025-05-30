@@ -195,7 +195,7 @@ export class TimeComplexityCodeLensProvider implements vscode.CodeLensProvider {
       if (/\/\s*\d+/.test(paramPassed) || /\*\s*\d+/.test(paramPassed)) {
         maxRecursiveComplexityFound = this.getMaxComplexity(
           maxRecursiveComplexityFound,
-          TimeComplexity.Logarithmic
+          TimeComplexity.Quadratic
         );
       } else if (/\s*-\s*\d+/.test(paramPassed) || /\s*\+\s*\d+/.test(paramPassed)) {
         maxRecursiveComplexityFound = this.getMaxComplexity(
