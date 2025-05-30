@@ -1,6 +1,6 @@
 # Time Complexity Analyzer
 
-![image](./image.png)
+![image](https://github.com/acidiney/vscode-time-complexity/raw/master/image.png)
 
 A simple adapter to manage time complexity in your applications.
 Motivation

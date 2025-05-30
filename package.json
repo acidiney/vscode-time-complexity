@@ -1,5 +1,5 @@
 {
-  "name": "@acidiney/time-complexity",
+  "name": "time-complexity",
   "displayName": "time-complexity",
   "description": "Get the time complexity of an fn",
   "version": "0.0.1",
