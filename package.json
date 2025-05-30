@@ -6,6 +6,9 @@
   "engines": {
     "vscode": "^1.100.0"
   },
+  "repository": {
+    "url": "https://github.com/acidiney/vscode-time-complexity"
+  },
   "categories": [
     "Other"
   ],
