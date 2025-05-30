@@ -1,71 +1,105 @@
-# time-complexity README
+# Time Complexity Analyzer
 
-This is the README for your extension "time-complexity". After writing up a brief description, we recommend including the following sections.
+A simple adapter to manage time complexity in your applications.
+Motivation
 
-## Features
+Ever been stuck? You're looking at your code, and you just know it's slow, but where's the bottleneck? How does that loop or recursive function really scale? Suddenly, you're guessing, or worse, running benchmarks that take forever.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+That's where the Time Complexity Analyzer steps in. The general idea? Simple: open your file and voilà. Instant Big O notation, right there in your editor. Your code keeps humming, and you get immediate insights into its performance characteristics.
+Installation Process
 
-For example if there is an image subfolder under your extension project workspace:
+This extension will soon be available on the VS Code Marketplace. For now, you can install it from source. Just use:
 
-\!\[feature X\]\(images/feature-x.png\)
+```bash
+$ git clone https://github.com/acidiney/vscode-time-complexity
+$ cd vscode-time-complexity
+$ npm install
+$ npm run compile
+```
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+Then, in VS Code:
 
-## Requirements
+  - Open the Extensions view (Ctrl+Shift+X or Cmd+Shift+X).
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+  - Click ... (More Actions) -> Install from VSIX....
 
-## Extension Settings
+  - Select the .vsix file from your project.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+Or, for development, just open the project folder in VS Code and hit F5 to run the "Extension Tests" debug configuration.
+Usage
 
-For example:
+After installing the extension, just open a JavaScript or TypeScript file in your VS Code editor. The estimated time complexity will magically appear as a CodeLens right above your function declarations. Pretty neat, right?
 
-This extension contributes the following settings:
+Example:
+```js
+// Time Complexity: O(log n)
+function findElement(arr, target) {
+    let low = 0;
+    let high = arr.length - 1;
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (arr[mid] === target) {
+            return mid;
+        } else if (arr[mid] < target) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return -1;
+}
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+// Time Complexity: O(n^2)
+function processAllPairs(data) {
+    data.forEach(item1 => {
+        data.forEach(item2 => {
+            console.log(item1, item2);
+        });
+    });
+}
+```
 
-## Known Issues
+## The Time Complexity Analyzer API (Features)
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+The Analyzer implements smart detection for common code patterns. The main idea is to not guess about your code's performance when you're writing it.
+Features
 
-## Release Notes
+  - Inline Complexity Display: See the estimated Big O notation `(e.g., O(1), O(log n), O(n), O(n log n), O(n^2), O(2^n), O(n!))` right in your code.
 
-Users appreciate release notes as you update your extension.
+  - Smart Recursion Analysis: It tries its best to figure out if your recursive functions are logarithmic, linear, or even exponential.
 
-### 1.0.0
+  - Call Graph Resolution: It looks at what functions your function calls and factors their complexity into the overall estimate.
 
-Initial release of ...
+  - Real-time Updates: Type, save, watch the numbers change. It's that responsive!
 
-### 1.0.1
+## Support
 
-Fixed issue #.
+Time Complexity Analyzer currently supports:
 
-### 1.1.0
+    JavaScript (.js)
 
-Added features X, Y, and Z.
+    TypeScript (.ts)
 
----
+    ...and more to come!
 
-## Following extension guidelines
+## Limitations
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+It's important to know that this isn't a crystal ball, but a smart guesser. Here's what it doesn't do (yet!):
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+    Heuristic-Based: It uses clever patterns, not a deep, philosophical understanding of your code. So, it's not 100% perfect for every weird trick you might pull.
 
-## Working with Markdown
+    No Runtime Analysis: It's all about the code on the page, not how fast it runs in real life.
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+    Scope Ambiguity: Sometimes, figuring out exactly which function is which in super complex nested scopes can be tricky for a regex.
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+    Argument Interpretation: It's good with simple math in recursive arguments, but if you're doing rocket science in there, it might just shrug.
 
-## For more information
+    External Libraries/APIs: It won't magically know the complexity of someExternalLibrary.doSomethingVeryComplex() unless it can see its code.
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+For hardcore, bulletproof complexity analysis, you'd need a super-duper tool with full code parsing. But for quick, helpful insights right in your editor, this is pretty solid!
 
-**Enjoy!**
+## Author
+Acidiney Dias
+
+## License
+MIT
